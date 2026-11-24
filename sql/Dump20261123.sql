@@ -92,7 +92,7 @@ CREATE TABLE `customers` (
 
 LOCK TABLES `customers` WRITE;
 /*!40000 ALTER TABLE `customers` DISABLE KEYS */;
-INSERT INTO `customers` VALUES (1,'Test Customer',_binary '\áfv,4,\é?¨ \rk—”','0970000000','2026-11-22 16:05:19');
+INSERT INTO `customers` VALUES (1,'Test Customer',_binary '\ï¿½fv,4,\ï¿½?ï¿½ï¿½\rkï¿½ï¿½','0970000000','2026-11-22 16:05:19');
 /*!40000 ALTER TABLE `customers` ENABLE KEYS */;
 UNLOCK TABLES;
 
