@@ -2,43 +2,237 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SecureLoan Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureLoan | Management Portal</title>
     <style>
-        body { font-family: Arial; background: #f4f6f8; display: flex; justify-content: center; padding-top: 50px; }
-        .box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 300px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        #message { color: red; margin-top: 10px; font-size: 14px; }
+        /* Modern, corporate CSS */
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+        
+        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 0; }
+        body { background: var(--background); color: var(--text-main); }
+        .hidden { display: none !important; }
+
+        /* Login Layout */
+        #login-screen { display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .login-card { background: var(--surface); width: 400px; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid var(--border); }
+        .login-card h2 { margin-bottom: 24px; font-weight: 600; text-align: center; color: var(--text-main); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: var(--text-muted); }
+        .form-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; transition: border 0.2s; }
+        .form-group input:focus { border-color: var(--primary); }
+        .btn-primary { width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .error-text { color: var(--danger); font-size: 13px; margin-top: 12px; text-align: center; }
+
+        /* Dashboard Layout */
+        .navbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 64px; display: flex; justify-content: space-between; align-items: center; }
+        .navbar h1 { font-size: 20px; font-weight: 600; color: var(--primary); }
+        .user-info { display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--text-muted); }
+        .btn-logout { padding: 6px 12px; background: transparent; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--text-main); font-size: 13px; }
+        .btn-logout:hover { background: #f1f5f9; }
+
+        .main-content { max-width: 1200px; margin: 32px auto; padding: 0 24px; }
+        
+        .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+        .tab-btn { padding: 12px 24px; background: transparent; border: none; border-bottom: 2px solid transparent; font-size: 15px; font-weight: 500; color: var(--text-muted); cursor: pointer; }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { border-bottom-color: var(--primary); color: var(--primary); }
+
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1); }
+        .card h3 { margin-bottom: 20px; font-size: 18px; font-weight: 600; }
+        
+        .action-bar { display: flex; gap: 12px; margin-bottom: 24px; background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid var(--border); }
+        .action-bar input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; flex: 1; }
+        .btn-success { padding: 8px 16px; background: var(--success); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+        .btn-success:hover { background: #059669; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+        th { background: #f8fafc; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+        
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fef9c3; color: #854d0e; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>SecureLoan Login</h2>
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
-        <button onclick="login()">Log In</button>
-        <div id="message"></div>
+
+    <!-- LOGIN -->
+    <div id="login-screen">
+        <div class="login-card">
+            <h2>SecureLoan Portal</h2>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            <button class="btn-primary" onclick="login()">Sign In</button>
+            <div id="login-msg" class="error-text"></div>
+        </div>
     </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard-screen" class="hidden">
+        <nav class="navbar">
+            <h1>SecureLoan Management</h1>
+            <div class="user-info">
+                <span id="user-info">Logged in as: Officer</span>
+                <button class="btn-logout" onclick="logout()">Sign Out</button>
+            </div>
+        </nav>
+        
+        <div class="main-content">
+            <div class="tabs">
+                <button id="tab-loans" class="tab-btn active" onclick="showTab('loans')">Loan Portfolio</button>
+                <button id="tab-audit" class="tab-btn" onclick="showTab('audit')">System Audit Log</button>
+            </div>
+
+            <!-- LOANS TAB -->
+            <div id="loans-tab" class="card">
+                <h3>Create New Loan</h3>
+                <div class="action-bar">
+                    <input type="number" id="new-cust-id" placeholder="Customer ID (e.g. 1)">
+                    <input type="number" id="new-amount" placeholder="Amount (ZMW)">
+                    <input type="number" id="new-rate" placeholder="Interest Rate (%)">
+                    <button class="btn-success" onclick="createLoan()">Create Loan</button>
+                </div>
+                <table id="loans-table">
+                    <thead>
+                        <tr><th>ID</th><th>Customer</th><th>Amount</th><th>Rate</th><th>Status</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- AUDIT TAB -->
+            <div id="audit-tab" class="card hidden">
+                <h3>System Audit Log</h3>
+                <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 14px;">This log is generated automatically by database triggers. Users cannot modify or delete these records.</p>
+                <table id="audit-table">
+                    <thead>
+                        <tr><th>ID</th><th>Database User</th><th>Action</th><th>Loan ID</th><th>Timestamp</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         async function login() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            const msg = document.getElementById('message');
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const msg = document.getElementById('login-msg');
+            
             try {
                 const res = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: user, password: pass })
+                    body: JSON.stringify({ username: u, password: p })
                 });
                 const data = await res.json();
+                
                 if (res.ok) {
-                    msg.style.color = "green";
-                    msg.innerText = "Welcome " + data.user.username + " (" + data.user.role + ")";
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('dashboard-screen').classList.remove('hidden');
+                    document.getElementById('user-info').innerText = "Logged in: " + data.user.username;
+                    loadLoans();
                 } else {
-                    msg.style.color = "red";
                     msg.innerText = data.error;
                 }
-            } catch (err) { msg.innerText = "Server error."; }
+            } catch (e) { msg.innerText = "Connection error."; }
+        }
+
+        function logout() {
+            window.location.reload();
+        }
+
+        function showTab(tabName) {
+            document.getElementById('loans-tab').classList.add('hidden');
+            document.getElementById('audit-tab').classList.add('hidden');
+            document.getElementById('tab-loans').classList.remove('active');
+            document.getElementById('tab-audit').classList.remove('active');
+            
+            document.getElementById(tabName + '-tab').classList.remove('hidden');
+            document.getElementById('tab-' + tabName).classList.add('active');
+            
+            if (tabName === 'loans') loadLoans();
+            if (tabName === 'audit') loadAudit();
+        }
+
+        async function loadLoans() {
+            const res = await fetch('/api/loans');
+            const loans = await res.json();
+            const tbody = document.querySelector('#loans-table tbody');
+            tbody.innerHTML = '';
+            
+            loans.forEach(loan => {
+                const badgeClass = loan.status === 'active' ? 'status-active' : 'status-pending';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>#${loan.loan_id}</td>
+                        <td>${loan.full_name}</td>
+                        <td>K${parseFloat(loan.amount).toLocaleString()}</td>
+                        <td>${loan.interest_rate}%</td>
+                        <td><span class="status-badge ${badgeClass}">${loan.status}</span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function createLoan() {
+            const custId = document.getElementById('new-cust-id').value;
+            const amount = document.getElementById('new-amount').value;
+            const rate = document.getElementById('new-rate').value;
+            
+            const res = await fetch('/api/loans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customer_id: custId, amount: amount, interest_rate: rate })
+            });
+            
+            if (res.ok) {
+                document.getElementById('new-cust-id').value = '';
+                document.getElementById('new-amount').value = '';
+                document.getElementById('new-rate').value = '';
+                loadLoans(); 
+            } else {
+                alert("Error creating loan. Check Customer ID.");
+            }
+        }
+
+        async function loadAudit() {
+            const res = await fetch('/api/audit');
+            const logs = await res.json();
+            const tbody = document.querySelector('#audit-table tbody');
+            tbody.innerHTML = '';
+            
+            logs.forEach(log => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${log.log_id}</td>
+                        <td>${log.db_user}</td>
+                        <td><strong>${log.action}</strong></td>
+                        <td>${log.loan_id || '-'}</td>
+                        <td>${new Date(log.changed_at).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
         }
     </script>
 </body>
