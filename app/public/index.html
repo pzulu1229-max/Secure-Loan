@@ -54,6 +54,8 @@
         .action-bar input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; flex: 1; }
         .btn-success { padding: 8px 16px; background: var(--success); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
         .btn-success:hover { background: #059669; }
+        .btn-approve { padding: 4px 8px; font-size: 12px; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-approve:hover { background: var(--primary-hover); }
 
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
@@ -112,7 +114,7 @@
                 </div>
                 <table id="loans-table">
                     <thead>
-                        <tr><th>ID</th><th>Customer</th><th>Amount</th><th>Rate</th><th>Status</th></tr>
+                        <tr><th>ID</th><th>Customer</th><th>Amount</th><th>Rate</th><th>Status</th><th>Action</th></tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -133,6 +135,8 @@
     </div>
 
     <script>
+        let currentUserRole = '';
+
         async function login() {
             const u = document.getElementById('username').value;
             const p = document.getElementById('password').value;
@@ -147,14 +151,40 @@
                 const data = await res.json();
                 
                 if (res.ok) {
+                    currentUserRole = data.user.role;
                     document.getElementById('login-screen').classList.add('hidden');
                     document.getElementById('dashboard-screen').classList.remove('hidden');
-                    document.getElementById('user-info').innerText = "Logged in: " + data.user.username;
+                    document.getElementById('user-info').innerText = `Logged in: ${data.user.username} (${data.user.role})`;
+                    
+                    applyRolePermissions(); 
                     loadLoans();
                 } else {
                     msg.innerText = data.error;
                 }
             } catch (e) { msg.innerText = "Connection error."; }
+        }
+
+        // --- ROLE-BASED ACCESS CONTROL (FRONTEND) ---
+        function applyRolePermissions() {
+            const actionBar = document.querySelector('.action-bar');
+            const auditTabBtn = document.getElementById('tab-audit');
+            const auditTabContent = document.getElementById('audit-tab');
+
+            // 1. Hide "Create Loan" for anyone who isn't an officer
+            if (currentUserRole === 'officer') {
+                actionBar.style.display = 'flex'; 
+            } else {
+                actionBar.style.display = 'none'; 
+            }
+
+            // 2. Only the Auditor gets to see the Audit Log tab
+            if (currentUserRole === 'auditor') {
+                auditTabBtn.style.display = 'block';
+            } else {
+                auditTabBtn.style.display = 'none';
+                auditTabContent.classList.add('hidden'); 
+                showTab('loans'); 
+            }
         }
 
         function logout() {
@@ -181,7 +211,13 @@
             tbody.innerHTML = '';
             
             loans.forEach(loan => {
-                const badgeClass = loan.status === 'active' ? 'status-active' : 'status-pending';
+                const badgeClass = loan.status === 'ACTIVE' || loan.status === 'active' ? 'status-active' : 'status-pending';
+                
+                let actionBtn = '-';
+                if (currentUserRole === 'officer' && loan.status === 'PENDING') {
+                    actionBtn = `<button class="btn-approve" onclick="approveLoan(${loan.loan_id})">Approve</button>`;
+                }
+
                 tbody.innerHTML += `
                     <tr>
                         <td>#${loan.loan_id}</td>
@@ -189,6 +225,7 @@
                         <td>K${parseFloat(loan.amount).toLocaleString()}</td>
                         <td>${loan.interest_rate}%</td>
                         <td><span class="status-badge ${badgeClass}">${loan.status}</span></td>
+                        <td>${actionBtn}</td>
                     </tr>
                 `;
             });
@@ -199,16 +236,18 @@
             const amount = document.getElementById('new-amount').value;
             const rate = document.getElementById('new-rate').value;
             
-            // Prevent empty submissions
             if (!custId || !amount || !rate) {
                 alert("Please fill in all fields.");
                 return;
             }
 
+            // Get the username from the top bar (e.g., "Logged in: officer1 (officer)")
+            const username = document.getElementById('user-info').innerText.split(': ')[1].split(' (')[0];
+
             const res = await fetch('/api/loans', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ customer_id: custId, amount: amount, interest_rate: rate })
+                body: JSON.stringify({ customer_id: custId, amount: amount, interest_rate: rate, created_by: username })
             });
             
             if (res.ok) {
@@ -217,7 +256,27 @@
                 document.getElementById('new-rate').value = '';
                 loadLoans(); 
             } else {
-                alert("Error creating loan. Check Customer ID.");
+                const data = await res.json();
+                alert(`Error: ${data.error}`);
+            }
+        }
+
+        async function approveLoan(loanId) {
+            const username = document.getElementById('user-info').innerText.split(': ')[1].split(' (')[0];
+            
+            const res = await fetch(`/api/loans/${loanId}/approve`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ approved_by: username })
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                alert(data.message);
+                loadLoans(); 
+            } else {
+                alert(`SECURITY ERROR: ${data.error}`);
             }
         }
 
